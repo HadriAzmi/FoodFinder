@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FoodFinder: Selangor & KL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .food-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-orange-600 text-white py-6 shadow-lg">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-4xl font-bold flex items-center justify-center">
+                <i class="fas fa-utensils mr-3"></i> 
+                FoodFinder: Selangor & KL
+            </h1>
+            <p class="mt-2 text-orange-100">Compare food prices across multiple locations</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-12">
+        <!-- Search Filters -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-orange-800 mb-6 flex items-center">
+                <i class="fas fa-filter mr-2"></i> Search Filters
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <!-- Location Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <select id="location" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Areas</option>
+                        <option value="shah_alam">Shah Alam</option>
+                        <option value="kl_central">KL Central</option>
+                        <option value="pj">Petaling Jaya</option>
+                        <option value="subang">Subang Jaya</option>
+                        <option value="klang">Klang</option>
+                    </select>
+                </div>
+
+                <!-- Food Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Food Type</label>
+                    <select id="foodType" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Types</option>
+                        <option value="rice">Rice</option>
+                        <option value="mee">Mee/Mamak</option>
+                        <option value="chicken">Chicken</option>
+                        <option value="western">Western</option>
+                        <option value="dessert">Desserts</option>
+                    </select>
+                </div>
+                
+                <!-- Price Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price Range (MYR)</label>
+                    <select id="price" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Prices</option>
+                        <option value="5">Under RM5</option>
+                        <option value="10">Under RM10</option>
+                        <option value="15">Under RM15</option>
+                        <option value="20">Under RM20</option>
+                    </select>
+                </div>
+                
+                <!-- Halal -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Halal</label>
+                    <select id="halal" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Options</option>
+                        <option value="halal">Halal Only</option>
+                    </select>
+                </div>
+                
+                <!-- Sort By -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                    <select id="sort" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="price_low">Price (Low to High)</option>
+                        <option value="price_high">Price (High to Low)</option>
+                        <option value="rating">Rating</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="filterRestaurants()" class="mt-6 w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center">
+                <i class="fas fa-search mr-2"></i> Search Food
+            </button>
+        </div>
+
+        <!-- Restaurant List -->
+        <div class="mb-12">
+            <h2 class="text-2xl font-bold text-orange-800 mb-6 flex items-center">
+                <i class="fas fa-store mr-2"></i> 
+                <span id="restaurantCount">Loading restaurants...</span>
+            </h2>
+            <div id="restaurantList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const restaurants = [
+            {
+                id: 1,
+                name: "Nasi Lemak Antarabangsa",
+                location: "shah_alam",
+                type: "rice",
+                halal: true,
+                rating: 4.5,
+                popularItems: [
+                    { name: "Nasi Lemak Ayam", price: 6.50 },
+                    { name: "Nasi Lemak Kambing", price: 8.00 },
+                    { name: "Nasi Lemak Biasa", price: 2.50 },
+                    { name: "Nasi Lemak Rendang", price: 9.50 },
+                    { name: "Nasi Lemak Sotong", price: 7.50 }
+                ],
+                image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 2,
+                name: "Mee Udang Kuala Selangor",
+                location: "klang",
+                type: "mee",
+                halal: true,
+                rating: 4.2,
+                popularItems: [
+                    { name: "Mee Udang Jumbo", price: 15.00 },
+                    { name: "Mee Sotong", price: 12.00 },
+                    { name: "Mee Kari", price: 8.50 },
+                    { name: "Mee Goreng", price: 7.00 },
+                    { name: "Mee Sup", price: 6.50 }
+                ],
+                image: "https://cdn4.premiumread.com/?url=https://malaymail.com/malaymail/uploads/images/2023/11/27/166878.jpg&w=1000&q=100&f=jpg&t=6"
+            },
+            {
+                id: 3,
+                name: "Mykori Dessert Cafe",
+                location: "shah_alam",
+                type: "dessert",
+                halal: true,
+                rating: 4.6,
+                popularItems: [
+                    { name: "Bingsu Chocolate", price: 18.90 },
+                    { name: "Bingsu Mango", price: 17.90 },
+                    { name: "Honey Toast", price: 15.90 },
+                    { name: "Matcha Ice Cream", price: 8.90 },
+                    { name: "Chocolate Lava Cake", price: 12.90 }
+                ],
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2PuB4KdXh_gvpvk-bceEJeZ9jCnLfXnf8vA&s"
+            },
+            {
+                id: 4,
+                name: "Pretty Hot Chicken",
+                location: "kl_central",
+                type: "chicken",
+                halal: true,
+                rating: 4.3,
+                popularItems: [
+                    { name: "Fried Chicken (2pcs)", price: 9.90 },
+                    { name: "Spicy Chicken Burger", price: 12.90 },
+                    { name: "Chicken Rice Set", price: 8.90 },
+                    { name: "Chicken Wings (5pcs)", price: 15.90 },
+                    { name: "Grilled Chicken Chop", price: 17.90 }
+                ],
+                image: "https://sethlui.com/wp-content/uploads/2024/09/image12-jpg.webp"
+            },
+            {
+                id: 5,
+                name: "Jibby & Co",
+                location: "subang",
+                type: "western",
+                halal: true,
+                rating: 4.4,
+                popularItems: [
+                    { name: "Eggs Benedict", price: 26.00 },
+                    { name: "Avocado Toast", price: 22.00 },
+                    { name: "Wagyu Beef Burger", price: 38.00 },
+                    { name: "Aglio Olio Pasta", price: 28.00 },
+                    { name: "Truffle Fries", price: 18.00 }
+                ],
+                image: "https://c1.staticflickr.com/4/3673/33659172505_41be0d6036_o.jpg"
+            },
+            {
+                id: 6,
+                name: "Village Park Nasi Lemak",
+                location: "pj",
+                type: "rice",
+                halal: true,
+                rating: 4.7,
+                popularItems: [
+                    { name: "Nasi Lemak Ayam Goreng", price: 10.90 },
+                    { name: "Nasi Lemak Rendang", price: 12.90 },
+                    { name: "Nasi Lemak Biasa", price: 3.50 },
+                    { name: "Nasi Lemak Telur", price: 4.90 },
+                    { name: "Nasi Lemak Special", price: 15.90 }
+                ],
+                image: "https://media-cdn.tripadvisor.com/media/photo-s/15/32/6b/2a/20181014-081931-largejpg.jpg"
+            },
+            {
+                id: 7,
+                name: "Devi's Corner",
+                location: "pj",
+                type: "mee",
+                halal: true,
+                rating: 4.1,
+                popularItems: [
+                    { name: "Roti Canai", price: 1.50 },
+                    { name: "Mee Goreng Mamak", price: 7.50 },
+                    { name: "Nasi Kandar Ayam", price: 9.50 },
+                    { name: "Thosai", price: 3.00 },
+                    { name: "Maggi Goreng", price: 6.50 }
+                ],
+                image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0e/a0/32/77/devi-s-corner.jpg?w=900&h=500&s=1"
+            },
+            {
+                id: 8,
+                name: "Restoran Tasty Chapati",
+                location: "klang",
+                type: "mee",
+                halal: true,
+                rating: 4.0,
+                popularItems: [
+                    { name: "Chapati Set", price: 4.50 },
+                    { name: "Tandoori Chicken", price: 12.00 },
+                    { name: "Butter Chicken", price: 15.00 },
+                    { name: "Naan Set", price: 8.50 },
+                    { name: "Biryani Rice", price: 9.50 }
+                ],
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbwgLjbXwkfSmjkyvxjyuMshOiP83dPbA3QQ&s"
+            },
+            {
+                id: 9,
+                name: "Barn Thai",
+                location: "kl_central",
+                type: "mee",
+                halal: true,
+                rating: 4.5,
+                popularItems: [
+                    { name: "Pad Thai", price: 16.90 },
+                    { name: "Tom Yum Soup", price: 18.90 },
+                    { name: "Green Curry", price: 19.90 },
+                    { name: "Mango Sticky Rice", price: 12.90 },
+                    { name: "Thai Milk Tea", price: 7.90 }
+                ],
+                image: "https://dynamic-media-cdn.tripadvisor.com/media/photo-o/15/3b/cd/f4/photo0jpg.jpg?w=500&h=-1&s=1"
+            },
+            {
+                id: 10,
+                name: "The Owls Cafe",
+                location: "subang",
+                type: "western",
+                halal: true,
+                rating: 4.2,
+                popularItems: [
+                    { name: "Big Breakfast", price: 25.90 },
+                    { name: "Salted Egg Pasta", price: 22.90 },
+                    { name: "Mushroom Soup", price: 10.90 },
+                    { name: "Beef Burger", price: 24.90 },
+                    { name: "French Toast", price: 16.90 }
+                ],
+                image: "https://s3-media0.fl.yelpcdn.com/bphoto/n-EOrixaIsy3c3rA8fmdCw/1000s.jpg"
+            },
+            {
+                id: 11,
+                name: "Hoppers KL",
+                location: "kl_central",
+                type: "western",
+                halal: false,
+                rating: 4.4,
+                popularItems: [
+                    { name: "Egg Hopper", price: 6.00 },
+                    { name: "Mutton Roll", price: 12.00 },
+                    { name: "Black Pork Curry", price: 28.00 },
+                    { name: "Prawn Curry", price: 26.00 },
+                    { name: "String Hoppers Set", price: 18.00 }
+                ],
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRLLUUtpfkHkAsxqejjcI6hgWGSHQ8KQYFs_g&s"
+            },
+            {
+                id: 12,
+                name: "The Ice Cream Bar Seapark",
+                location: "pj",
+                type: "dessert",
+                halal: false,
+                rating: 4.7,
+                popularItems: [
+                    { name: "Wine Ice Cream", price: 15.00 },
+                    { name: "Rum & Raisin", price: 11.00 },
+                    { name: "Bailey's Coffee", price: 16.00 },
+                    { name: "Bourbon Vanilla", price: 15.00 },
+                    { name: "Champagne Sorbet", price: 18.00 }
+                ],
+                image: "https://media.timeout.com/images/103379900/750/422/image.jpg"
+            },
+            {
+                id: 13,
+                name: "El Cerdo",
+                location: "shah_alam",
+                type: "western",
+                halal: false,
+                rating: 4.5,
+                popularItems: [
+                    { name: "Roasted Suckling Pig", price: 48.90 },
+                    { name: "Iberico Ham Platter", price: 36.90 },
+                    { name: "Pork Knuckle", price: 59.90 },
+                    { name: "Bacon Carbonara", price: 32.90 },
+                    { name: "Red Wine (Glass)", price: 25.90 }
+                ],
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ45Oiq37Z-_MO0NzkXoa37EjQuXc-ktcxevg&s"
+            },
+            {
+                id: 14,
+                name: "Vintry Wine Bar",
+                location: "kl_central",
+                type: "western",
+                halal: false,
+                rating: 4.3,
+                popularItems: [
+                    { name: "Pork Chop", price: 38.90 },
+                    { name: "Beef Bacon Burger", price: 32.90 },
+                    { name: "Wine Flight Tasting", price: 45.90 },
+                    { name: "Charcuterie Board", price: 52.90 },
+                    { name: "Salted Egg Pork Ribs", price: 36.90 }
+                ],
+                image: "https://www.theyumlist.net/wp-content/uploads/2019/05/Vintry-Melaka-Location-750x500.jpg"
+            },
+            {
+                id: 15,
+                name: "Brotzeit German Bier Bar",
+                location: "subang",
+                type: "western",
+                halal: false,
+                rating: 4.2,
+                popularItems: [
+                    { name: "Crispy Pork Knuckle", price: 69.90 },
+                    { name: "German Sausage Platter", price: 49.90 },
+                    { name: "Wheat Beer (500ml)", price: 32.90 },
+                    { name: "Beer Tasting Flight", price: 36.90 },
+                    { name: "Munich Bacon Potato", price: 24.90 }
+                ],
+                image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSOsz7K-mwxxM5EWRV9xOzLN6B4SLrNnd82fw&s"
+            }
+            
+        ];
+
+        function filterRestaurants() {
+            const location = document.getElementById('location').value;
+            const foodType = document.getElementById('foodType').value;
+            const price = document.getElementById('price').value;
+            const halal = document.getElementById('halal').value;
+            const sort = document.getElementById('sort').value;
+
+            let filtered = restaurants.filter(restaurant => {
+                // Location filter
+                if (location !== 'all' && restaurant.location !== location) return false;
+                
+                // Food type filter
+                if (foodType !== 'all' && restaurant.type !== foodType) return false;
+                
+                // Halal filter
+                if (halal === 'halal' && !restaurant.halal) return false;
+                
+                // Price filter
+                if (price !== 'all') {
+                    const maxPrice = parseInt(price);
+                    const hasAffordableItems = restaurant.popularItems.some(item => item.price <= maxPrice);
+                    if (!hasAffordableItems) return false;
+                }
+                
+                return true;
+            });
+
+            // Sorting
+            if (sort === 'price_low') {
+                filtered.sort((a, b) => Math.min(...a.popularItems.map(i => i.price)) - Math.min(...b.popularItems.map(i => i.price)));
+            } else if (sort === 'price_high') {
+                filtered.sort((a, b) => Math.max(...b.popularItems.map(i => i.price)) - Math.max(...a.popularItems.map(i => i.price)));
+            } else if (sort === 'rating') {
+                filtered.sort((a, b) => b.rating - a.rating);
+            }
+
+            renderRestaurants(filtered);
+        }
+
+        function renderRestaurants(data) {
+            const container = document.getElementById('restaurantList');
+            const countElement = document.getElementById('restaurantCount');
+            
+            container.innerHTML = '';
+            countElement.textContent = `Found ${data.length} restaurants`;
+            
+            data.forEach(restaurant => {
+                const card = `
+                    <div class="food-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300">
+                        <div class="relative h-48 bg-gray-200">
+                            <img src="${restaurant.image}" alt="${restaurant.name}" class="w-full h-full object-cover">
+                            <div class="absolute bottom-0 left-0 bg-orange-600 text-white px-3 py-1 text-sm font-semibold">
+                                <i class="fas fa-star mr-1"></i> ${restaurant.rating}
+                            </div>
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${restaurant.name}</h3>
+                            <p class="text-gray-600 mb-3 flex items-center">
+                                <i class="fas fa-map-marker-alt text-orange-500 mr-2"></i>
+                                ${getLocationName(restaurant.location)}
+                            </p>
+                            <div class="mb-4">
+                                <h4 class="font-semibold text-gray-700 mb-2">Popular Items:</h4>
+                                <ul class="space-y-2">
+                                    ${restaurant.popularItems.map(item => `
+                                        <li class="flex justify-between">
+                                            <span>${item.name}</span>
+                                            <span class="font-bold text-orange-600">RM${item.price.toFixed(2)}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function getLocationName(locationKey) {
+            const locations = {
+                shah_alam: "Shah Alam",
+                kl_central: "KL Central",
+                pj: "Petaling Jaya",
+                subang: "Subang Jaya",
+                klang: "Klang"
+            };
+            return locations[locationKey] || "Unknown Location";
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            filterRestaurants();
+        });
+    </script>
+</body>
+</html>
