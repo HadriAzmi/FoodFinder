@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FoodFinder: Selangor & KL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .food-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        .modal {
+            backdrop-filter: blur(5px);
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #f1c40f;
+        }
+        .confetti:nth-child(odd) { background: #e74c3c; }
+        .confetti:nth-child(even) { background: #3498db; }
+        .celebrate {
+            animation: celebrate 0.5s ease-in-out;
+        }
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        .discount-shine {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            background-size: 400% 400%;
+            animation: gradient 3s ease infinite;
+        }
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .bounce-in {
+            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .waiting-indicator {
+            display: inline-block;
+            animation: pulse 2s infinite;
+        }
+        .available { color: #10b981; }
+        .busy { color: #f59e0b; }
+        .closed { color: #ef4444; }
+        .pagination-btn {
+            transition: all 0.3s ease;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .page-indicator {
+            min-width: 40px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-orange-50 to-amber-50 min-h-screen">
+    <!-- Location Modal -->
+    <div id="locationModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center">
+                <div class="mb-6">
+                    <i class="fas fa-map-marker-alt text-6xl text-orange-500 mb-4"></i>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-2">Set Your Location</h2>
+                    <p class="text-gray-600">We need your location to show distances to restaurants</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <button onclick="getCurrentLocation()" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center">
+                        <i class="fas fa-crosshairs mr-2"></i>
+                        <span id="gpsButtonText">Use My Current Location</span>
+                    </button>
+                    
+                    <div class="flex items-center">
+                        <hr class="flex-1 border-gray-300">
+                        <span class="px-4 text-gray-500 text-sm">OR</span>
+                        <hr class="flex-1 border-gray-300">
+                    </div>
+                    
+                    <div class="text-left">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Search Location</label>
+                        <div class="relative">
+                            <input type="text" id="locationSearch" placeholder="Enter your address..." 
+                                   class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 pl-10">
+                            <i class="fas fa-search absolute left-3 top-3.5 text-gray-400"></i>
+                        </div>
+                        <button onclick="searchLocation()" class="w-full mt-3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition duration-300">
+                            Set This Location
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="locationStatus" class="mt-4 text-sm text-gray-600"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Discount Modal -->
+    <div id="discountModal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 transform transition-all">
+            <div class="text-center">
+                <div class="mb-6">
+                    <i class="fas fa-gift text-6xl text-purple-500 mb-4 bounce-in"></i>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-2">🎉 Exclusive Offers! 🎉</h2>
+                    <p class="text-gray-600">Limited time discount codes just for you!</p>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-gradient-to-r from-red-400 to-pink-500 text-white p-4 rounded-lg transform hover:scale-105 transition-transform">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-lg">FIRST20</h3>
+                                <p class="text-sm opacity-90">20% off your first order</p>
+                            </div>
+                            <button onclick="copyCode('FIRST20')" class="bg-white text-red-500 px-3 py-1 rounded font-bold text-sm hover:bg-gray-100">
+                                COPY
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-blue-400 to-purple-500 text-white p-4 rounded-lg transform hover:scale-105 transition-transform">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-lg">FOODIE15</h3>
+                                <p class="text-sm opacity-90">15% off orders above RM25</p>
+                            </div>
+                            <button onclick="copyCode('FOODIE15')" class="bg-white text-blue-500 px-3 py-1 rounded font-bold text-sm hover:bg-gray-100">
+                                COPY
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gradient-to-r from-green-400 to-blue-500 text-white p-4 rounded-lg transform hover:scale-105 transition-transform">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h3 class="font-bold text-lg">WEEKEND25</h3>
+                                <p class="text-sm opacity-90">25% off weekend orders</p>
+                            </div>
+                            <button onclick="copyCode('WEEKEND25')" class="bg-white text-green-500 px-3 py-1 rounded font-bold text-sm hover:bg-gray-100">
+                                COPY
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <button onclick="closeDiscountModal()" class="mt-6 bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-6 rounded-lg">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-orange-600 text-white py-6 shadow-lg relative">
+        <div class="container mx-auto px-4 text-center">
+            <button onclick="document.getElementById('discountModal').classList.remove('hidden')" 
+        class="absolute top-4 right-4 bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg transition">
+  <i class="fas fa-tag mr-2"></i> View Discounts
+</button>
+            <h1 class="text-4xl font-bold flex items-center justify-center">
+                <i class="fas fa-utensils mr-3"></i> 
+                FoodFinder: Selangor & KL
+            </h1>
+            <p class="mt-2 text-orange-100">Compare food prices across multiple locations</p>
+            <div id="currentLocationDisplay" class="mt-2 text-orange-200 text-sm hidden">
+                <i class="fas fa-map-marker-alt mr-1"></i>
+                <span id="userLocationText">Current location set</span>
+                <button onclick="showLocationModal()" class="ml-2 text-orange-200 hover:text-white underline">Change</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8">
+        <!-- Search Filters -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold text-orange-800 mb-6 flex items-center">
+                <i class="fas fa-filter mr-2"></i> Search Filters
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+                <!-- Location Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <select id="location" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Areas</option>
+                        <option value="shah_alam">Shah Alam</option>
+                        <option value="kl_central">KL Central</option>
+                        <option value="pj">Petaling Jaya</option>
+                        <option value="subang">Subang Jaya</option>
+                        <option value="klang">Klang</option>
+                    </select>
+                </div>
+
+                <!-- Food Type -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Food Type</label>
+                    <select id="foodType" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Types</option>
+                        <option value="rice">Rice</option>
+                        <option value="mee">Mee/Mamak</option>
+                        <option value="chicken">Chicken</option>
+                        <option value="western">Western</option>
+                        <option value="dessert">Desserts</option>
+                    </select>
+                </div>
+                
+                <!-- Price Range -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price Range (MYR)</label>
+                    <select id="price" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Prices</option>
+                        <option value="5">Under RM5</option>
+                        <option value="10">Under RM10</option>
+                        <option value="15">Under RM15</option>
+                        <option value="20">Under RM20</option>
+                    </select>
+                </div>
+
+                <!-- Distance Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Distance</label>
+                    <select id="distance" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">Any Distance</option>
+                        <option value="5">Within 5km</option>
+                        <option value="10">Within 10km</option>
+                        <option value="15">Within 15km</option>
+                        <option value="20">Within 20km</option>
+                    </select>
+                </div>
+                
+                <!-- Dietary Options -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Dietary</label>
+                    <select id="dietary" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Options</option>
+                        <option value="halal">Halal</option>
+                        <option value="vegetarian">Vegetarian</option>
+                        <option value="vegan">Vegan</option>
+                        <option value="non_halal">Non-Halal (Alcohol/Wine)</option>
+                    </select>
+                </div>
+
+                <!-- Availability Filter -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+                    <select id="availability" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="all">All Status</option>
+                        <option value="available">Available Now</option>
+                        <option value="busy">Busy (15-30 min)</option>
+                        <option value="very_busy">Very Busy (30+ min)</option>
+                    </select>
+                </div>
+                
+                <!-- Sort By -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                    <select id="sort" class="w-full p-2 border rounded-lg bg-gray-50 focus:ring-2 focus:ring-orange-500">
+                        <option value="distance">Distance (Nearest)</option>
+                        <option value="rating">Rating (Highest)</option>
+                        <option value="reviews">Most Reviews</option>
+                        <option value="price_low">Price (Low to High)</option>
+                        <option value="price_high">Price (High to Low)</option>
+                        <option value="waiting_time">Shortest Wait</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button onclick="filterRestaurants()" class="mt-6 w-full md:w-auto bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-8 rounded-lg transition duration-300 flex items-center justify-center">
+                <i class="fas fa-search mr-2"></i> Search Food
+            </button>
+        </div>
+
+        <!-- Restaurant List -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold text-orange-800 mb-6 flex items-center">
+                <i class="fas fa-store mr-2"></i> 
+                <span id="restaurantCount">Loading restaurants...</span>
+            </h2>
+            <div id="restaurantList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamic content -->
+            </div>
+            
+            <!-- Pagination Controls -->
+            <div id="paginationControls" class="mt-8 flex justify-center items-center space-x-2">
+                <!-- Pagination buttons will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Restaurant data with enhanced information
+        const restaurants = [
+            {
+                id: 1,
+                name: "Nasi Lemak Antarabangsa",
+                location: "shah_alam",
+                coordinates: { lat: 3.0733, lng: 101.5185 },
+                type: "rice",
+                dietary: ["halal"],
+                rating: 4.5,
+                reviewCount: 1247,
+                availability: "available",
+                waitingTime: 10,
+                popularItems: [
+                    { name: "Nasi Lemak Ayam", price: 6.50 },
+                    { name: "Nasi Lemak Kambing", price: 8.00 },
+                    { name: "Nasi Lemak Biasa", price: 2.50 },
+                    { name: "Nasi Lemak Rendang", price: 9.50 },
+                    { name: "Nasi Lemak Sotong", price: 7.50 }
+                ],
+                recentReviews: [
+                    { user: "Ahmad", rating: 5, comment: "Best nasi lemak in Shah Alam! The sambal is perfect.", time: "2 hours ago" },
+                    { user: "Siti", rating: 4, comment: "Good portion size and authentic taste.", time: "1 day ago" },
+                    { user: "Kumar", rating: 5, comment: "Always fresh and hot. Highly recommended!", time: "3 days ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 2,
+                name: "Mee Udang Kuala Selangor",
+                location: "klang",
+                coordinates: { lat: 3.0370, lng: 101.4448 },
+                type: "mee",
+                dietary: ["halal"],
+                rating: 4.2,
+                reviewCount: 892,
+                availability: "busy",
+                waitingTime: 25,
+                popularItems: [
+                    { name: "Mee Udang Jumbo", price: 15.00 },
+                    { name: "Mee Sotong", price: 12.00 },
+                    { name: "Mee Kari", price: 8.50 },
+                    { name: "Mee Goreng", price: 7.00 },
+                    { name: "Mee Sup", price: 6.50 }
+                ],
+                recentReviews: [
+                    { user: "Fatimah", rating: 4, comment: "Fresh prawns but wait time is quite long.", time: "1 hour ago" },
+                    { user: "Ali", rating: 5, comment: "Worth the wait! Huge prawns and flavorful broth.", time: "5 hours ago" },
+                    { user: "Lim", rating: 3, comment: "Good taste but overpriced for the portion.", time: "1 day ago" }
+                ],
+                image: "https://cdn4.premiumread.com/?url=https://malaymail.com/malaymail/uploads/images/2023/11/27/166878.jpg&w=1000&q=100&f=jpg&t=6"
+            },
+            {
+                id: 3,
+                name: "Green Garden Vegan Cafe",
+                location: "shah_alam",
+                coordinates: { lat: 3.0833, lng: 101.5333 },
+                type: "western",
+                dietary: ["vegan", "vegetarian"],
+                rating: 4.6,
+                reviewCount: 634,
+                availability: "available",
+                waitingTime: 15,
+                popularItems: [
+                    { name: "Vegan Buddha Bowl", price: 18.90 },
+                    { name: "Plant-Based Burger", price: 22.90 },
+                    { name: "Quinoa Salad", price: 16.90 },
+                    { name: "Vegan Smoothie Bowl", price: 14.90 },
+                    { name: "Raw Chocolate Cake", price: 12.90 }
+                ],
+                recentReviews: [
+                    { user: "Sarah", rating: 5, comment: "Amazing vegan options! Finally a place that caters to us.", time: "3 hours ago" },
+                    { user: "David", rating: 4, comment: "Not vegan myself but the food is delicious and healthy.", time: "1 day ago" },
+                    { user: "Maya", rating: 5, comment: "Love the variety and the staff knows about veganism.", time: "2 days ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 4,
+                name: "Pretty Hot Chicken",
+                location: "kl_central",
+                coordinates: { lat: 3.1390, lng: 101.6869 },
+                type: "chicken",
+                dietary: ["halal"],
+                rating: 4.3,
+                reviewCount: 1156,
+                availability: "available",
+                waitingTime: 12,
+                popularItems: [
+                    { name: "Fried Chicken (2pcs)", price: 9.90 },
+                    { name: "Spicy Chicken Burger", price: 12.90 },
+                    { name: "Chicken Rice Set", price: 8.90 },
+                    { name: "Chicken Wings (5pcs)", price: 15.90 },
+                    { name: "Grilled Chicken Chop", price: 17.90 }
+                ],
+                recentReviews: [
+                    { user: "Razak", rating: 4, comment: "Crispy chicken, good value for money.", time: "30 minutes ago" },
+                    { user: "Nadia", rating: 5, comment: "Love their spicy seasoning! Always consistent.", time: "2 hours ago" },
+                    { user: "Wei Ming", rating: 4, comment: "Fast service and tasty chicken.", time: "4 hours ago" }
+                ],
+                image: "https://sethlui.com/wp-content/uploads/2024/09/image12-jpg.webp"
+            },
+            {
+                id: 5,
+                name: "Veggie Delights",
+                location: "subang",
+                coordinates: { lat: 3.0487, lng: 101.5914 },
+                type: "western",
+                dietary: ["vegetarian"],
+                rating: 4.4,
+                reviewCount: 789,
+                availability: "busy",
+                waitingTime: 20,
+                popularItems: [
+                    { name: "Veggie Benedict", price: 24.00 },
+                    { name: "Mushroom Burger", price: 19.00 },
+                    { name: "Caprese Salad", price: 16.00 },
+                    { name: "Veggie Pasta", price: 22.00 },
+                    { name: "Quinoa Bowl", price: 18.00 }
+                ],
+                recentReviews: [
+                    { user: "Priya", rating: 5, comment: "Best vegetarian restaurant in Subang! So many options.", time: "1 hour ago" },
+                    { user: "Chen", rating: 4, comment: "Great for vegetarians, good atmosphere too.", time: "3 hours ago" },
+                    { user: "Aisha", rating: 4, comment: "Fresh ingredients and creative dishes.", time: "1 day ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 6,
+                name: "Village Park Nasi Lemak",
+                location: "pj",
+                coordinates: { lat: 3.1073, lng: 101.6426 },
+                type: "rice",
+                dietary: ["halal"],
+                rating: 4.7,
+                reviewCount: 2341,
+                availability: "very_busy",
+                waitingTime: 35,
+                popularItems: [
+                    { name: "Nasi Lemak Ayam Goreng", price: 10.90 },
+                    { name: "Nasi Lemak Rendang", price: 12.90 },
+                    { name: "Nasi Lemak Biasa", price: 3.50 },
+                    { name: "Nasi Lemak Telur", price: 4.90 },
+                    { name: "Nasi Lemak Special", price: 15.90 }
+                ],
+                recentReviews: [
+                    { user: "Hasan", rating: 5, comment: "The BEST nasi lemak ever! Worth the wait.", time: "15 minutes ago" },
+                    { user: "Linda", rating: 5, comment: "Always crowded but so worth it. Authentic taste.", time: "1 hour ago" },
+                    { user: "Raj", rating: 4, comment: "Long queue but the food is exceptional.", time: "2 hours ago" }
+                ],
+                image: "https://media-cdn.tripadvisor.com/media/photo-s/15/32/6b/2a/20181014-081931-largejpg.jpg"
+            },
+            {
+                id: 7,
+                name: "The Wine Loft",
+                location: "kl_central",
+                coordinates: { lat: 3.1570, lng: 101.7123 },
+                type: "western",
+                dietary: ["non_halal"],
+                rating: 4.5,
+                reviewCount: 567,
+                availability: "available",
+                waitingTime: 18,
+                popularItems: [
+                    { name: "Beef Steak with Wine", price: 65.00 },
+                    { name: "Pork Ribs", price: 45.00 },
+                    { name: "Wine Tasting Set", price: 85.00 },
+                    { name: "Bacon Carbonara", price: 32.00 },
+                    { name: "Cheese Platter", price: 38.00 }
+                ],
+                recentReviews: [
+                    { user: "Michael", rating: 5, comment: "Excellent wine selection and great steaks!", time: "2 hours ago" },
+                    { user: "Jessica", rating: 4, comment: "Romantic ambiance, perfect for date night.", time: "1 day ago" },
+                    { user: "Robert", rating: 5, comment: "Best wine bar in KL, knowledgeable staff.", time: "2 days ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 8,
+                name: "Craft Beer House",
+                location: "subang",
+                coordinates: { lat: 3.0600, lng: 101.5900 },
+                type: "western",
+                dietary: ["non_halal"],
+                rating: 4.2,
+                reviewCount: 834,
+                availability: "busy",
+                waitingTime: 22,
+                popularItems: [
+                    { name: "Beer Flight Tasting", price: 35.00 },
+                    { name: "BBQ Pork Platter", price: 48.00 },
+                    { name: "Craft IPA", price: 18.00 },
+                    { name: "Bacon Burger", price: 28.00 },
+                    { name: "Wings & Beer Combo", price: 32.00 }
+                ],
+                recentReviews: [
+                    { user: "Alex", rating: 4, comment: "Great craft beer selection, food is decent too.", time: "1 hour ago" },
+                    { user: "Emily", rating: 5, comment: "Love the atmosphere and the beer variety!", time: "4 hours ago" },
+                    { user: "James", rating: 3, comment: "Good beer but food could be better.", time: "1 day ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1436076863939-06870fe779c2?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 9,
+                name: "Seaside Grill",
+                location: "klang",
+                coordinates: { lat: 3.0400, lng: 101.4500 },
+                type: "western",
+                dietary: ["non_halal"],
+                rating: 4.4,
+                reviewCount: 712,
+                availability: "available",
+                waitingTime: 15,
+                popularItems: [
+                    { name: "Grilled Salmon", price: 32.90 },
+                    { name: "Seafood Platter", price: 45.00 },
+                    { name: "Garlic Butter Prawns", price: 28.50 },
+                    { name: "Lobster Thermidor", price: 75.00 },
+                    { name: "Fish & Chips", price: 18.90 }
+                ],
+                recentReviews: [
+                    { user: "Thomas", rating: 5, comment: "Fresh seafood with perfect seasoning!", time: "1 hour ago" },
+                    { user: "Lisa", rating: 4, comment: "Great ocean view and delicious food.", time: "3 hours ago" },
+                    { user: "Kevin", rating: 4, comment: "Worth the price for the quality.", time: "1 day ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 10,
+                name: "Mamak Corner",
+                location: "kl_central",
+                coordinates: { lat: 3.1520, lng: 101.7050 },
+                type: "mee",
+                dietary: ["halal"],
+                rating: 4.1,
+                reviewCount: 1023,
+                availability: "busy",
+                waitingTime: 20,
+                popularItems: [
+                    { name: "Roti Canai Special", price: 4.50 },
+                    { name: "Mee Goreng Mamak", price: 8.90 },
+                    { name: "Nasi Kandar", price: 12.50 },
+                    { name: "Teh Tarik", price: 3.00 },
+                    { name: "Tandoori Chicken", price: 15.90 }
+                ],
+                recentReviews: [
+                    { user: "Ravi", rating: 4, comment: "Authentic mamak experience in the city center.", time: "45 minutes ago" },
+                    { user: "Sofia", rating: 5, comment: "Best roti canai I've had in KL!", time: "2 hours ago" },
+                    { user: "Amir", rating: 4, comment: "Always busy but worth the wait.", time: "4 hours ago" }
+                ],
+                image: "https://lh3.googleusercontent.com/p/AF1QipPlkHcAydWGaDiseBDmT_TpU1TBx3Bll41P41NT=s1360-w1360-h1020-rw"
+            },
+            {
+                id: 11,
+                name: "Sushi Sensation",
+                location: "subang",
+                coordinates: { lat: 3.0550, lng: 101.5850 },
+                type: "rice",
+                dietary: ["non_halal"],
+                rating: 4.7,
+                reviewCount: 876,
+                availability: "available",
+                waitingTime: 12,
+                popularItems: [
+                    { name: "Sashimi Platter", price: 45.00 },
+                    { name: "Dragon Roll", price: 28.50 },
+                    { name: "Unagi Don", price: 32.00 },
+                    { name: "Tempura Udon", price: 22.90 },
+                    { name: "Matcha Ice Cream", price: 12.90 }
+                ],
+                recentReviews: [
+                    { user: "Kenji", rating: 5, comment: "Authentic Japanese flavors, fresh ingredients.", time: "30 minutes ago" },
+                    { user: "Mei", rating: 4, comment: "Beautiful presentation and taste.", time: "2 hours ago" },
+                    { user: "Daniel", rating: 5, comment: "Best sushi experience in Subang area.", time: "1 day ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1617196034796-73dfa7b1fd56?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            },
+            {
+                id: 12,
+                name: "Pasta Paradise",
+                location: "pj",
+                coordinates: { lat: 3.1100, lng: 101.6350 },
+                type: "western",
+                dietary: ["vegetarian"],
+                rating: 4.3,
+                reviewCount: 654,
+                availability: "available",
+                waitingTime: 10,
+                popularItems: [
+                    { name: "Truffle Mushroom Pasta", price: 24.90 },
+                    { name: "Seafood Linguine", price: 28.50 },
+                    { name: "Four Cheese Pizza", price: 32.00 },
+                    { name: "Vegetable Risotto", price: 22.90 },
+                    { name: "Tiramisu", price: 15.90 }
+                ],
+                recentReviews: [
+                    { user: "Maria", rating: 4, comment: "Perfectly cooked pasta with authentic sauces.", time: "1 hour ago" },
+                    { user: "John", rating: 5, comment: "Cozy atmosphere and friendly service.", time: "3 hours ago" },
+                    { user: "Sophia", rating: 4, comment: "Great vegetarian options available.", time: "1 day ago" }
+                ],
+                image: "https://images.unsplash.com/photo-1606491956689-2ea866880c84?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60"
+            }
+        ];
+
+        let userLocation = null;
+        let filteredRestaurants = [];
+        let currentPage = 0;
+        const resultsPerPage = 6;
+
+        // Calculate distance between two coordinates using Haversine formula
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                     Math.sin(dLng/2) * Math.sin(dLng/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Get user's current location using GPS
+        function getCurrentLocation() {
+            const button = document.getElementById('gpsButtonText');
+            const status = document.getElementById('locationStatus');
+            
+            if (!navigator.geolocation) {
+                status.innerHTML = '<span class="text-red-500">Geolocation is not supported by this browser.</span>';
+                return;
+            }
+
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Getting location...';
+            status.innerHTML = '<span class="text-blue-500 pulse-animation">Accessing your location...</span>';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    userLocation = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude
+                    };
+
+                    
+                    // Get address from coordinates (reverse geocoding simulation)
+                    getAddressFromCoordinates(userLocation.lat, userLocation.lng)
+                        .then(address => {
+                            document.getElementById('userLocationText').textContent = address;
+                            document.getElementById('currentLocationDisplay').classList.remove('hidden');
+                            document.getElementById('locationModal').style.display = 'none';
+                            filterRestaurants();
+                        });
+                },
+                (error) => {
+                    button.textContent = 'Use My Current Location';
+                    let errorMessage = 'Unable to retrieve your location. ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Location access denied.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out.';
+                            break;
+                    }
+                    status.innerHTML = `<span class="text-red-500">${errorMessage}</span>`;
+                }
+            );
+        }
+
+        // Simulate reverse geocoding (in real app, use Google Maps API or similar)
+        async function getAddressFromCoordinates(lat, lng) {
+            // This is a simulation - in real app, you'd use a geocoding service
+            const locations = [
+                { name: "Kuala Lumpur City Center", lat: 3.1570, lng: 101.7123 },
+                { name: "Shah Alam", lat: 3.0733, lng: 101.5185 },
+                { name: "Petaling Jaya", lat: 3.1073, lng: 101.6426 },
+                { name: "Subang Jaya", lat: 3.0487, lng: 101.5914 },
+                { name: "Klang", lat: 3.0370, lng: 101.4448 }
+            ];
+            
+            let closest = locations[0];
+            let minDistance = calculateDistance(lat, lng, closest.lat, closest.lng);
+            
+            locations.forEach(location => {
+                const distance = calculateDistance(lat, lng, location.lat, location.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closest = location;
+                }
+            });
+            
+            return `Near ${closest.name}`;
+        }
+
+        // Search location by name (simplified)
+        function searchLocation() {
+            const searchInput = document.getElementById('locationSearch').value.trim();
+            const status = document.getElementById('locationStatus');
+            
+            if (!searchInput) {
+                status.innerHTML = '<span class="text-red-500">Please enter a location.</span>';
+                return;
+            }
+
+            // Simulate location search (in real app, use geocoding API)
+            const locationMap = {
+                'kuala lumpur': { lat: 3.1570, lng: 101.7123, name: 'Kuala Lumpur' },
+                'kl': { lat: 3.1570, lng: 101.7123, name: 'Kuala Lumpur' },
+                'shah alam': { lat: 3.0733, lng: 101.5185, name: 'Shah Alam' },
+                'petaling jaya': { lat: 3.1073, lng: 101.6426, name: 'Petaling Jaya' },
+                'pj': { lat: 3.1073, lng: 101.6426, name: 'Petaling Jaya' },
+                'subang jaya': { lat: 3.0487, lng: 101.5914, name: 'Subang Jaya' },
+                'subang': { lat: 3.0487, lng: 101.5914, name: 'Subang Jaya' },
+                'klang': { lat: 3.0370, lng: 101.4448, name: 'Klang' }
+            };
+
+            const found = locationMap[searchInput.toLowerCase()];
+            if (found) {
+                userLocation = { lat: found.lat, lng: found.lng };
+                document.getElementById('userLocationText').textContent = found.name;
+                document.getElementById('currentLocationDisplay').classList.remove('hidden');
+                document.getElementById('locationModal').style.display = 'none';
+                filterRestaurants();
+            } else {
+                status.innerHTML = '<span class="text-red-500">Location not found. Try "Kuala Lumpur", "Shah Alam", "Petaling Jaya", "Subang Jaya", or "Klang".</span>';
+            }
+        }
+
+        // Show location modal
+        function showLocationModal() {
+            document.getElementById('locationModal').style.display = 'flex';
+        }
+
+        // Filter restaurants with distance calculation
+        function filterRestaurants() {
+            const location = document.getElementById('location').value;
+            const foodType = document.getElementById('foodType').value;
+            const price = document.getElementById('price').value;
+            const distance = document.getElementById('distance').value;
+            const dietary = document.getElementById('dietary').value;
+            const sort = document.getElementById('sort').value;
+            const availability = document.getElementById('availability').value;
+            filteredRestaurants = restaurants.map(restaurant => {
+                // Calculate distance if user location is available
+                let distanceKm = null;
+                if (userLocation) {
+                    distanceKm = calculateDistance(
+                        userLocation.lat, userLocation.lng,
+                        restaurant.coordinates.lat, restaurant.coordinates.lng
+                    );
+                }
+                
+                return { ...restaurant, distance: distanceKm };
+            }).filter(restaurant => {
+                // Location filter
+                if (location !== 'all' && restaurant.location !== location) return false;
+                
+                // Food type filter
+                if (foodType !== 'all' && restaurant.type !== foodType) return false;
+                
+                // Halal filter
+                if (dietary !== 'all' && !restaurant.dietary.includes(dietary)) return false;
+                
+                // Price filter
+                if (price !== 'all') {
+                    const maxPrice = parseInt(price);
+                    const hasAffordableItems = restaurant.popularItems.some(item => item.price <= maxPrice);
+                    if (!hasAffordableItems) return false;
+                }
+                
+                // Distance filter
+                if (distance !== 'all' && restaurant.distance) {
+                    const maxDistance = parseInt(distance);
+                    if (restaurant.distance > maxDistance) return false;
+                }
+               // Availability filter
+if (availability !== 'all') {
+    console.log('Selected availability:', availability);
+    console.log('Restaurant availability:', restaurant.availability);
+    if (restaurant.availability !== availability) return false;
+}
+                return true;
+            });
+
+            // Sorting
+            if (sort === 'distance' && userLocation) {
+                filteredRestaurants.sort((a, b) => (a.distance || 999) - (b.distance || 999));
+            } else if (sort === 'price_low') {
+                filteredRestaurants.sort((a, b) => Math.min(...a.popularItems.map(i => i.price)) - Math.min(...b.popularItems.map(i => i.price)));
+            } else if (sort === 'price_high') {
+                filteredRestaurants.sort((a, b) => Math.max(...b.popularItems.map(i => i.price)) - Math.max(...a.popularItems.map(i => i.price)));
+            } else if (sort === 'rating') {
+                filteredRestaurants.sort((a, b) => b.rating - a.rating);
+            } else if (sort === 'reviews') {
+                filteredRestaurants.sort((a, b) => b.reviewCount - a.reviewCount);
+            } else if (sort === 'waiting_time') {
+                filteredRestaurants.sort((a, b) => a.waitingTime - b.waitingTime);
+            }
+
+            // Reset to first page when filtering
+            currentPage = 0;
+            showPage(currentPage);
+        }
+        
+        // Show a specific page of results
+        function showPage(page) {
+            currentPage = page;
+            const start = page * resultsPerPage;
+            const pageData = filteredRestaurants.slice(start, start + resultsPerPage);
+            renderRestaurants(pageData);
+            renderPaginationControls();
+        }
+        
+        // Render pagination controls
+        function renderPaginationControls() {
+            const totalPages = Math.ceil(filteredRestaurants.length / resultsPerPage);
+            const paginationContainer = document.getElementById('paginationControls');
+            
+            // Only show pagination if there's more than one page
+            if (totalPages <= 1) {
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            let paginationHTML = `
+                <button onclick="showPage(${currentPage - 1})" 
+                        ${currentPage === 0 ? 'disabled' : ''}
+                        class="pagination-btn bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-l-lg ${currentPage === 0 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    <i class="fas fa-chevron-left mr-1"></i> Previous
+                </button>
+            `;
+            
+            // Page indicators
+            for (let i = 0; i < totalPages; i++) {
+                paginationHTML += `
+                    <button onclick="showPage(${i})" 
+                            class="pagination-btn page-indicator font-bold py-2 px-3 rounded ${i === currentPage ? 'bg-orange-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}">
+                        ${i + 1}
+                    </button>
+                `;
+            }
+            
+            paginationHTML += `
+                <button onclick="showPage(${currentPage + 1})" 
+                        ${currentPage === totalPages - 1 ? 'disabled' : ''}
+                        class="pagination-btn bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-r-lg ${currentPage === totalPages - 1 ? 'opacity-50 cursor-not-allowed' : ''}">
+                    Next <i class="fas fa-chevron-right ml-1"></i>
+                </button>
+            `;
+            
+            paginationContainer.innerHTML = paginationHTML;
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            // Add visual feedback
+        }
+
+        function closeDiscountModal() {
+            document.getElementById('discountModal').classList.add('hidden');
+        }
+        function getAvailabilityColor(availability) {
+            switch(availability) {
+                case 'available': return 'bg-green-500';
+                case 'busy': return 'bg-yellow-500'; 
+                case 'very_busy': return 'bg-red-500';
+                default: return 'bg-gray-500';
+            }
+        }
+
+        function getAvailabilityText(availability) {
+            switch(availability) {
+                case 'available': return 'Available Now';
+                case 'busy': return 'Busy (15-30 min)';
+                case 'very_busy': return 'Very Busy (30+ min)';
+                default: return 'Unknown';
+            }
+        }
+        // Render restaurants with distance info
+        function renderRestaurants(data) {
+            const container = document.getElementById('restaurantList');
+            const countElement = document.getElementById('restaurantCount');
+            
+            container.innerHTML = '';
+            countElement.textContent = `Found ${filteredRestaurants.length} restaurants (Page ${currentPage + 1} of ${Math.ceil(filteredRestaurants.length / resultsPerPage)})`;
+            
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-utensils text-5xl text-gray-300 mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-700">No restaurants found</h3>
+                        <p class="text-gray-500 mt-2">Try adjusting your filters</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            data.forEach(restaurant => {
+                const distanceInfo = restaurant.distance ? 
+                    `<div class="text-sm text-green-600 font-semibold mb-2">
+                        <i class="fas fa-route mr-1"></i> ${restaurant.distance.toFixed(1)}km away
+                    </div>` : '';
+
+                const card = `
+                    <div class="food-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300">
+                        <div class="relative h-48 bg-gray-200">
+                            <img src="${restaurant.image}" alt="${restaurant.name}" class="w-full h-full object-cover">
+                            <div class="absolute bottom-0 left-0 bg-orange-600 text-white px-3 py-1 text-sm font-semibold">
+                                <i class="fas fa-star mr-1"></i> ${restaurant.rating}
+                            </div>
+                            ${restaurant.distance ? `<div class="absolute top-2 right-2 bg-green-500 text-white px-2 py-1 text-xs font-semibold rounded-full">
+                                ${restaurant.distance.toFixed(1)}km
+                            </div>` : ''}
+                        </div>
+                        <div class="p-5">
+                            <h3 class="text-xl font-bold text-gray-800 mb-2">${restaurant.name}</h3>
+                            ${distanceInfo}
+                            <p class="text-gray-600 mb-3 flex items-center">
+                                <i class="fas fa-map-marker-alt text-orange-500 mr-2"></i>
+                                ${getLocationName(restaurant.location)}
+                            </p>
+                             <!-- ADD THIS AVAILABILITY & WAITING TIME SECTION -->
+            <div class="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full mr-2 ${getAvailabilityColor(restaurant.availability)}"></div>
+                    <span class="text-sm font-medium">${getAvailabilityText(restaurant.availability)}</span>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <i class="fas fa-clock mr-1"></i> ${restaurant.waitingTime} min wait
+                </div>
+            </div>
+            
+            <div class="mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Popular Items:</h4>
+                <ul class="space-y-2">
+                    ${restaurant.popularItems.map(item => `
+                        <li class="flex justify-between">
+                            <span>${item.name}</span>
+                            <span class="font-bold text-orange-600">RM${item.price.toFixed(2)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+            
+            <!-- ADD THIS REVIEWS SECTION -->
+            <div class="mb-4">
+                <h4 class="font-semibold text-gray-700 mb-2">Recent Reviews:</h4>
+                <div class="space-y-2 max-h-32 overflow-y-auto">
+                    ${restaurant.recentReviews.slice(0, 3).map(review => `
+                        <div class="bg-gray-50 p-2 rounded text-sm">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="font-medium text-gray-800">${review.user}</span>
+                                <div class="flex items-center">
+                                    <span class="text-yellow-500">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</span>
+                                    <span class="text-xs text-gray-500 ml-1">${review.time}</span>
+                                </div>
+                            </div>
+                            <p class="text-gray-600">${review.comment}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', card);
+            });
+        }
+
+        function getLocationName(locationKey) {
+            const locations = {
+                shah_alam: "Shah Alam",
+                kl_central: "KL Central",
+                pj: "Petaling Jaya",
+                subang: "Subang Jaya",
+                klang: "Klang"
+            };
+            return locations[locationKey] || "Unknown Location";
+        }
+
+        // Handle Enter key in search input
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('locationSearch').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    searchLocation();
+                }
+            });
+            
+            // Initialize the app
+            filterRestaurants();
+        });
+    </script>
+</body>
+</html>
